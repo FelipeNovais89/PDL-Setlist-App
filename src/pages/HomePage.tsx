@@ -6,6 +6,22 @@ import { useSetlistStore } from '../store/useSetlistStore'
 import { listSetlists, loadSetlist } from '../lib/github'
 import type { GitHubFile } from '../types'
 
+// ─── URLs testadas pelo debug (mesmas do github.ts) ──────────────────────────
+const DEBUG_OWNER      = 'FelipeNovais89'
+const DEBUG_DATA_REPO  = import.meta.env.VITE_GITHUB_DATA_REPO || 'PDLSetlist'
+const DEBUG_BRANCH     = import.meta.env.VITE_GITHUB_BRANCH    || 'main'
+const DEBUG_DIR        = import.meta.env.VITE_GITHUB_SETLISTS_DIR || 'Data/setlists'
+const DEBUG_TOKEN      = import.meta.env.VITE_GITHUB_TOKEN     || ''
+
+interface DebugResult {
+  url: string
+  status: number
+  statusText: string
+  headers: Record<string, string>
+  body: unknown
+  error?: string
+}
+
 export default function HomePage() {
   const navigate  = useNavigate()
   const { loadItems, clearSetlist, setFilename, filename, items } = useSetlistStore()
@@ -17,6 +33,81 @@ export default function HomePage() {
   const [newName, setNewName] = useState('')
   const [newModalOpen, setNewModalOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Debug state
+  const [debugLoading, setDebugLoading] = useState(false)
+  const [debugResults, setDebugResults] = useState<DebugResult[]>([])
+  const [debugOpen, setDebugOpen] = useState(false)
+
+  async function runDebug() {
+    setDebugLoading(true)
+    setDebugResults([])
+    setDebugOpen(true)
+
+    const results: DebugResult[] = []
+
+    // Testa 3 URLs: com letras diferentes no dir para descobrir o path correto
+    const paths = [
+      `Data/setlists`,   // lowercase
+      `Data/Setlists`,   // uppercase S
+      `Data`,            // listagem da pasta pai
+    ]
+
+    for (const dir of paths) {
+      const url = `https://api.github.com/repos/${DEBUG_OWNER}/${DEBUG_DATA_REPO}/contents/${dir}?ref=${DEBUG_BRANCH}`
+      const headers: Record<string, string> = {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      }
+      if (DEBUG_TOKEN) headers['Authorization'] = `Bearer ${DEBUG_TOKEN}`
+
+      try {
+        const res = await fetch(url, { headers })
+        const respHeaders: Record<string, string> = {}
+        res.headers.forEach((v, k) => { respHeaders[k] = v })
+
+        let body: unknown
+        try { body = await res.json() }
+        catch { body = await res.text().catch(() => '(sem body)') }
+
+        results.push({
+          url,
+          status: res.status,
+          statusText: res.statusText,
+          headers: respHeaders,
+          body,
+        })
+      } catch (e) {
+        results.push({
+          url,
+          status: 0,
+          statusText: 'NETWORK ERROR',
+          headers: {},
+          body: null,
+          error: String(e),
+        })
+      }
+    }
+
+    // Também testa se o token é válido via /user
+    const userUrl = 'https://api.github.com/user'
+    try {
+      const res = await fetch(userUrl, {
+        headers: DEBUG_TOKEN
+          ? { Authorization: `Bearer ${DEBUG_TOKEN}`, Accept: 'application/vnd.github+json' }
+          : { Accept: 'application/vnd.github+json' },
+      })
+      let body: unknown
+      try { body = await res.json() }
+      catch { body = '(sem body)' }
+      results.push({ url: userUrl, status: res.status, statusText: res.statusText, headers: {}, body })
+    } catch (e) {
+      results.push({ url: userUrl, status: 0, statusText: 'NETWORK ERROR', headers: {}, body: null, error: String(e) })
+    }
+
+    setDebugResults(results)
+    setDebugLoading(false)
+  }
 
   async function openLoadModal() {
     setLoadModalOpen(true)
@@ -84,6 +175,17 @@ export default function HomePage() {
         <Button variant="secondary" size="lg" className="w-full justify-center" onClick={openLoadModal}>
           Carregar do GitHub
         </Button>
+
+        {/* ── DEBUG ── */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-center border border-dashed border-yellow-700 text-yellow-600 hover:text-yellow-400"
+          onClick={runDebug}
+          loading={debugLoading}
+        >
+          🔍 Debug GitHub API
+        </Button>
       </div>
 
       {error && (
@@ -98,9 +200,7 @@ export default function HomePage() {
           <label className="block text-sm text-zinc-400">
             Nome do arquivo
             <input
-              autoFocus
-              type="text"
-              value={newName}
+              autoFocus type="text" value={newName}
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleNew() }}
               placeholder="nome_da_setlist"
@@ -133,9 +233,44 @@ export default function HomePage() {
             ))}
           </div>
         )}
-        {error && (
-          <p className="text-red-400 text-xs mt-2 whitespace-pre-wrap">{error}</p>
-        )}
+        {error && <p className="text-red-400 text-xs mt-2 whitespace-pre-wrap">{error}</p>}
+      </Modal>
+
+      {/* Modal: debug */}
+      <Modal open={debugOpen} onClose={() => setDebugOpen(false)} title="🔍 Debug GitHub API" maxWidth="max-w-2xl">
+        <div className="space-y-4 text-xs font-mono">
+          {/* Config usada */}
+          <div className="bg-navy-950 rounded-lg p-3 space-y-1 text-zinc-400">
+            <p><span className="text-zinc-500">DATA_REPO:</span> <span className="text-white">{DEBUG_DATA_REPO}</span></p>
+            <p><span className="text-zinc-500">BRANCH:</span>    <span className="text-white">{DEBUG_BRANCH}</span></p>
+            <p><span className="text-zinc-500">DIR:</span>       <span className="text-white">{DEBUG_DIR}</span></p>
+            <p><span className="text-zinc-500">TOKEN:</span>     <span className={DEBUG_TOKEN ? 'text-green-400' : 'text-red-400'}>{DEBUG_TOKEN ? `✓ configurado (${DEBUG_TOKEN.slice(0,8)}…)` : '✗ NÃO configurado (VITE_GITHUB_TOKEN vazio)'}</span></p>
+          </div>
+
+          {debugLoading && <p className="text-zinc-400 text-center py-4">Testando URLs...</p>}
+
+          {debugResults.map((r, i) => (
+            <div key={i} className="border border-navy-700 rounded-lg overflow-hidden">
+              {/* URL + status */}
+              <div className={`flex items-center justify-between px-3 py-2 ${r.status === 200 ? 'bg-green-950' : r.status === 0 ? 'bg-red-950' : 'bg-yellow-950'}`}>
+                <span className="text-zinc-300 break-all">{r.url}</span>
+                <span className={`ml-2 font-bold flex-none ${r.status === 200 ? 'text-green-400' : r.status === 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+                  {r.status || 'ERR'} {r.statusText}
+                </span>
+              </div>
+
+              {/* Erro de rede */}
+              {r.error && (
+                <div className="px-3 py-2 bg-red-950/50 text-red-300">{r.error}</div>
+              )}
+
+              {/* Body */}
+              <pre className="px-3 py-2 text-zinc-300 overflow-x-auto max-h-48 text-[10px] leading-relaxed bg-navy-950">
+                {JSON.stringify(r.body, null, 2)}
+              </pre>
+            </div>
+          ))}
+        </div>
       </Modal>
     </div>
   )
