@@ -15,15 +15,13 @@ export function PauseItem({ item }: Props) {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-dashed border-zinc-700 rounded-xl"
+      className="flex items-center gap-2 px-3 py-2 bg-navy-950 border border-dashed border-navy-700 rounded-xl"
     >
       <button
         {...attributes} {...listeners}
-        className="text-zinc-600 hover:text-zinc-400 cursor-grab active:cursor-grabbing touch-none"
+        className="text-navy-600 hover:text-navy-400 cursor-grab active:cursor-grabbing touch-none"
       >⣿</button>
-
-      <span className="text-zinc-600 flex-none">⏸</span>
-
+      <span className="text-navy-600 flex-none">⏸</span>
       <input
         type="text"
         value={item.pauseLabel}
@@ -31,10 +29,9 @@ export function PauseItem({ item }: Props) {
         className="flex-1 bg-transparent text-zinc-400 text-sm outline-none"
         placeholder="Pausa"
       />
-
       <button
         onClick={() => removeItem(item.blockIndex, item.itemIndex)}
-        className="text-zinc-700 hover:text-red-500 text-lg leading-none"
+        className="text-navy-700 hover:text-red-500 text-lg leading-none"
       >×</button>
     </div>
   )

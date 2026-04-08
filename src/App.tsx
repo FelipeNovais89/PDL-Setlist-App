@@ -7,7 +7,7 @@ import OcrPage from './pages/OcrPage'
 
 export default function App() {
   return (
-    <div className="bg-black min-h-screen">
+    <div className="bg-navy-900 min-h-screen">
       <Routes>
         <Route path="/"         element={<HomePage />} />
         <Route path="/editor"   element={<EditorPage />} />

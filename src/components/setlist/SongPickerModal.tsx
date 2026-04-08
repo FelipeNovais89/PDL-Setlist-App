@@ -30,17 +30,19 @@ export function SongPickerModal({ open, onClose, onSelect }: Props) {
           value={filter}
           onChange={e => setFilter(e.target.value)}
           autoFocus
-          className="w-full bg-zinc-800 text-white rounded-lg px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:border-amber-500"
+          className="w-full bg-navy-800 text-white rounded-lg px-3 py-2 text-sm border border-navy-600 focus:outline-none focus:border-gold-400"
         />
         <div className="space-y-1 max-h-80 overflow-y-auto">
           {filtered.map((song, i) => (
             <button
               key={i}
               onClick={() => { onSelect(song); onClose() }}
-              className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-700 transition-colors"
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-navy-700 transition-colors"
             >
               <div className="text-sm text-white font-medium truncate">{song.titulo}</div>
-              <div className="text-xs text-zinc-400">{song.artista}{song.tomOriginal ? ` · ${song.tomOriginal}` : ''}</div>
+              <div className="text-xs text-zinc-400">
+                {song.artista}{song.tomOriginal ? ` · ${song.tomOriginal}` : ''}
+              </div>
             </button>
           ))}
           {filtered.length === 0 && (

@@ -1,17 +1,10 @@
 import { useState } from 'react'
 import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
+  DndContext, closestCenter,
+  PointerSensor, TouchSensor,
+  useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Block, SetlistItem } from '../../types'
 import { useSetlistStore } from '../../store/useSetlistStore'
 import { SongItem } from './SongItem'
@@ -32,7 +25,7 @@ export function BlockCard({ block, onPreview }: Props) {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+    useSensor(TouchSensor,   { activationConstraint: { delay: 150, tolerance: 5 } })
   )
 
   function handleDragEnd(event: DragEndEvent) {
@@ -57,29 +50,32 @@ export function BlockCard({ block, onPreview }: Props) {
   const itemIds = block.items.map(i => `${i.blockIndex}-${i.itemIndex}`)
 
   return (
-    <div className="bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden">
+    <div className="bg-navy-800 rounded-2xl border border-navy-700 overflow-hidden">
       {/* Header do bloco */}
-      <div className="flex items-center justify-between px-4 py-3 bg-zinc-800">
+      <div className="flex items-center justify-between px-4 py-3 bg-navy-700">
         {editingName ? (
           <input
             autoFocus
             value={nameValue}
             onChange={e => setNameValue(e.target.value)}
             onBlur={() => { renameBlock(block.blockIndex, nameValue); setEditingName(false) }}
-            onKeyDown={e => { if (e.key === 'Enter') { renameBlock(block.blockIndex, nameValue); setEditingName(false) } }}
-            className="bg-zinc-700 text-white rounded px-2 py-0.5 text-sm font-semibold w-40"
+            onKeyDown={e => {
+              if (e.key === 'Enter') { renameBlock(block.blockIndex, nameValue); setEditingName(false) }
+            }}
+            className="bg-navy-800 text-white rounded px-2 py-0.5 text-sm font-semibold w-40 border border-navy-600"
           />
         ) : (
           <button
             onClick={() => setEditingName(true)}
-            className="text-white font-semibold text-sm hover:text-amber-400"
+            className="text-gold-400 font-semibold text-sm hover:text-gold-300"
           >
-            {block.blockName} <span className="text-zinc-600 text-xs">({block.items.length})</span>
+            {block.blockName}{' '}
+            <span className="text-navy-500 text-xs">({block.items.length})</span>
           </button>
         )}
         <button
           onClick={() => removeBlock(block.blockIndex)}
-          className="text-zinc-600 hover:text-red-400 text-sm"
+          className="text-navy-500 hover:text-red-400 text-xs"
         >Remover bloco</button>
       </div>
 
@@ -90,10 +86,10 @@ export function BlockCard({ block, onPreview }: Props) {
             {block.items.map(item =>
               item.itemType === 'pause'
                 ? <PauseItem key={`${item.blockIndex}-${item.itemIndex}`} item={item} />
-                : <SongItem key={`${item.blockIndex}-${item.itemIndex}`} item={item} onPreview={onPreview} />
+                : <SongItem  key={`${item.blockIndex}-${item.itemIndex}`} item={item} onPreview={onPreview} />
             )}
             {block.items.length === 0 && (
-              <p className="text-center text-zinc-700 text-sm py-3">Bloco vazio</p>
+              <p className="text-center text-navy-600 text-sm py-3">Bloco vazio</p>
             )}
           </div>
         </SortableContext>
@@ -103,11 +99,11 @@ export function BlockCard({ block, onPreview }: Props) {
       <div className="flex gap-2 px-3 pb-3">
         <button
           onClick={() => setPickerOpen(true)}
-          className="flex-1 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors"
+          className="flex-1 py-1.5 rounded-lg bg-navy-700 hover:bg-navy-600 text-zinc-300 text-sm transition-colors"
         >+ Música</button>
         <button
           onClick={() => addPause(block.blockIndex)}
-          className="flex-1 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-500 text-sm transition-colors"
+          className="flex-1 py-1.5 rounded-lg bg-navy-700 hover:bg-navy-600 text-zinc-500 text-sm transition-colors"
         >+ Pausa</button>
       </div>
 

@@ -9,7 +9,7 @@ const links = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-zinc-950 border-t border-zinc-800 flex z-40 safe-area-bottom">
+    <nav className="fixed bottom-0 inset-x-0 bg-navy-950 border-t border-navy-700 flex z-40 safe-area-bottom">
       {links.map(({ to, label, icon }) => (
         <NavLink
           key={to}
@@ -17,7 +17,7 @@ export function BottomNav() {
           end={to === '/'}
           className={({ isActive }) =>
             `flex-1 flex flex-col items-center gap-0.5 py-2 text-xs transition-colors ${
-              isActive ? 'text-amber-400' : 'text-zinc-500 hover:text-zinc-300'
+              isActive ? 'text-gold-400' : 'text-zinc-500 hover:text-zinc-300'
             }`
           }
         >

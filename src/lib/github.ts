@@ -1,16 +1,23 @@
 /**
  * Funções de integração com GitHub Contents API.
- * Lê e escreve CSVs de setlist e o banco de músicas.
+ *
+ * ATENÇÃO — dois repositórios distintos:
+ *   APP_REPO  = PDL-Setlist-App  (código)   → não usado em runtime
+ *   DATA_REPO = PDLSetlist       (dados)    → setlists + banco de músicas
+ *
+ * Configure VITE_GITHUB_DATA_REPO=PDLSetlist no .env.
  */
 
 import Papa from 'papaparse'
 import type { SetlistItem, Song, GitHubFile } from '../types'
 import { SETLIST_COLS } from '../types'
 
-const OWNER  = import.meta.env.VITE_GITHUB_OWNER  as string
-const REPO   = import.meta.env.VITE_GITHUB_REPO   as string
-const BRANCH = (import.meta.env.VITE_GITHUB_BRANCH as string) || 'main'
-const DIR    = (import.meta.env.VITE_GITHUB_SETLISTS_DIR as string) || 'Data/Setlists'
+const OWNER     = import.meta.env.VITE_GITHUB_OWNER     as string
+// Repo de DADOS (PDLSetlist) — diferente do repo do app (PDL-Setlist-App)
+const DATA_REPO = (import.meta.env.VITE_GITHUB_DATA_REPO as string) || 'PDLSetlist'
+const BRANCH    = (import.meta.env.VITE_GITHUB_BRANCH   as string) || 'main'
+// Path real no repositório: Data/setlists (lowercase 's')
+const DIR       = (import.meta.env.VITE_GITHUB_SETLISTS_DIR as string) || 'Data/setlists'
 
 function token(): string {
   return import.meta.env.VITE_GITHUB_TOKEN as string
@@ -23,14 +30,15 @@ function authHeaders(): HeadersInit {
     : { Accept: 'application/vnd.github+json' }
 }
 
-const API = `https://api.github.com/repos/${OWNER}/${REPO}`
+const API = `https://api.github.com/repos/${OWNER}/${DATA_REPO}`
 
 // ─── Banco de músicas ─────────────────────────────────────────────────────────
 
 export async function fetchSongsCSV(): Promise<Song[]> {
   const url = import.meta.env.VITE_SONGS_CSV_URL as string
+  if (!url) throw new Error('VITE_SONGS_CSV_URL não configurada')
   const res = await fetch(url)
-  if (!res.ok) throw new Error(`Erro ao buscar músicas: ${res.status}`)
+  if (!res.ok) throw new Error(`Erro ao buscar músicas: ${res.status} (${url})`)
   const text = await res.text()
   return parseSongsCSV(text)
 }
@@ -42,7 +50,7 @@ export function parseSongsCSV(csv: string): Song[] {
     transformHeader: h => h.trim(),
   })
   return data.map(row => ({
-    titulo:              row['Título']             ?? row['Titulo']             ?? '',
+    titulo:              row['Título']             ?? row['Titulo']              ?? '',
     artista:             row['Artista']            ?? '',
     tomOriginal:         row['Tom_Original']       ?? '',
     bpm:                 row['BPM']                ?? '',
@@ -65,12 +73,12 @@ export function songsToCSV(songs: Song[]): string {
 // ─── Setlists ─────────────────────────────────────────────────────────────────
 
 export async function listSetlists(): Promise<GitHubFile[]> {
-  const res = await fetch(`${API}/contents/${DIR}?ref=${BRANCH}`, {
-    headers: authHeaders(),
-  })
+  const url = `${API}/contents/${DIR}?ref=${BRANCH}`
+  const res = await fetch(url, { headers: authHeaders() })
   if (!res.ok) {
     if (res.status === 404) return []
-    throw new Error(`Erro ao listar setlists: ${res.status}`)
+    const body = await res.text().catch(() => '')
+    throw new Error(`Erro ao listar setlists: HTTP ${res.status}\nURL: ${url}\n${body}`)
   }
   const data = await res.json()
   return (Array.isArray(data) ? data : []).filter((f: GitHubFile) => f.name.endsWith('.csv'))
@@ -130,10 +138,12 @@ export function setlistToCSV(items: SetlistItem[]): string {
 }
 
 export async function saveSetlist(filename: string, items: SetlistItem[]): Promise<void> {
-  const path = `${DIR}/${filename}`
+  if (!token()) throw new Error('VITE_GITHUB_TOKEN não configurado — não é possível salvar')
+
+  const path    = `${DIR}/${filename}`
   const content = btoa(unescape(encodeURIComponent(setlistToCSV(items))))
 
-  // Busca SHA se o arquivo já existe
+  // Busca SHA se o arquivo já existe (necessário para atualização)
   let sha: string | undefined
   const existing = await fetch(`${API}/contents/${path}?ref=${BRANCH}`, {
     headers: authHeaders(),
@@ -157,12 +167,14 @@ export async function saveSetlist(filename: string, items: SetlistItem[]): Promi
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(`Erro ao salvar setlist: ${res.status} — ${JSON.stringify(err)}`)
+    throw new Error(`Erro ao salvar setlist: HTTP ${res.status} — ${JSON.stringify(err)}`)
   }
 }
 
 export async function saveSongsCSV(songs: Song[]): Promise<void> {
-  const path = 'Data/PDL_musicas.csv'
+  if (!token()) throw new Error('VITE_GITHUB_TOKEN não configurado — não é possível salvar')
+
+  const path    = 'Data/PDL_musicas.csv'
   const content = btoa(unescape(encodeURIComponent(songsToCSV(songs))))
 
   let sha: string | undefined
@@ -188,6 +200,6 @@ export async function saveSongsCSV(songs: Song[]): Promise<void> {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(`Erro ao salvar músicas: ${res.status} — ${JSON.stringify(err)}`)
+    throw new Error(`Erro ao salvar músicas: HTTP ${res.status} — ${JSON.stringify(err)}`)
   }
 }
